@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
+	"unicode/utf8"
 
 	pb "github.com/digital-dream-labs/api/go/chipperpb"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
@@ -110,54 +113,38 @@ func togetherRequest(transcribedText string) string {
 }
 
 func openaiRequest(transcribedText string) string {
-	sendString := "You are a helpful robot called " + vars.APIConfig.Knowledge.RobotName + ". You will be given a question asked by a user and you must provide the best answer you can. It may not be punctuated or spelled correctly as the STT model is small. The answer will be put through TTS, so it should be a speakable string. Keep the answer concise yet informative. Here is the question: " + "\\" + "\"" + transcribedText + "\\" + "\"" + " , Answer: "
+	scriptPath := "/Users/sward/src/wire-pod/chipper/pkg/wirepod/preqs/openai_request.py"
+
+	if transcribedText == "" {
+		return "There was an error transcribing the audio."
+	}
+
 	logger.Println("Making request to OpenAI...")
-	url := "https://api.openai.com/v1/completions"
-	formData := `{
-"model": "gpt-3.5-turbo-instruct",
-"prompt": "` + sendString + `",
-"temperature": 0.7,
-"max_tokens": 256,
-"top_p": 1,
-"frequency_penalty": 0.2,
-"presence_penalty": 0
-}`
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer([]byte(formData)))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(vars.APIConfig.Knowledge.Key))
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	cmd := exec.Command("python", scriptPath, transcribedText)
+
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	apiKey := strings.TrimSpace(vars.APIConfig.Knowledge.Key)
+	cmd.Env = append(os.Environ(), "OPENAI_VECTOR_API_KEY="+apiKey)
+
+	err := cmd.Run()
 	if err != nil {
-		logger.Println(err)
+		errOutput := stderr.Bytes()
+		if utf8.Valid(errOutput) {
+			logger.Println("Failed to execute script:", err, ", Output:", stderr.String())
+		} else {
+			logger.Println("Failed to execute script: Output contains invalid UTF-8")
+		}
 		return "There was an error making the request to OpenAI."
 	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	type openAIStruct struct {
-		ID      string `json:"id"`
-		Object  string `json:"object"`
-		Created int    `json:"created"`
-		Model   string `json:"model"`
-		Choices []struct {
-			Text         string      `json:"text"`
-			Index        int         `json:"index"`
-			Logprobs     interface{} `json:"logprobs"`
-			FinishReason string      `json:"finish_reason"`
-		} `json:"choices"`
-		Usage struct {
-			PromptTokens     int `json:"prompt_tokens"`
-			CompletionTokens int `json:"completion_tokens"`
-			TotalTokens      int `json:"total_tokens"`
-		} `json:"usage"`
+
+	apiResponse := strings.TrimSpace(out.String())
+	if apiResponse == "" {
+		return "The response from OpenAI was empty."
 	}
-	var openAIResponse openAIStruct
-	err = json.Unmarshal(body, &openAIResponse)
-	if err != nil || len(openAIResponse.Choices) == 0 {
-		logger.Println("OpenAI returned no response.")
-		logger.Println(string(body))
-		return "OpenAI returned no response."
-	}
-	apiResponse := strings.TrimSpace(openAIResponse.Choices[0].Text)
 	logger.Println("OpenAI response: " + apiResponse)
 	return apiResponse
 }
