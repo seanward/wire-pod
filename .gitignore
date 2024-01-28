@@ -40,3 +40,6 @@
 /chipper/plugins/*.so
 /whisper.cpp
 .DS_Store
+chipper/conversation_history.json
+chipper/plugins/agent/conversation_history.json
+chipper/plugins/agent/agent.so
