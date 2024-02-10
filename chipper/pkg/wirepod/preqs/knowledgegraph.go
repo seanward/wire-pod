@@ -113,14 +113,15 @@ func togetherRequest(transcribedText string) string {
 }
 
 func openaiRequest(transcribedText string) string {
-	scriptPath := "/Users/sward/src/wire-pod/chipper/pkg/wirepod/preqs/openai_request.py"
+	//scriptPath := "/Users/sward/src/wire-pod/chipper/pkg/wirepod/preqs/openai_request.py"
+	scriptPath := "/Users/sward/src/wire-pod/chipper/pkg/wirepod/preqs/agent.sh"
 
 	if transcribedText == "" {
 		return "There was an error transcribing the audio."
 	}
 
 	logger.Println("Making request to OpenAI...")
-	cmd := exec.Command("python", scriptPath, transcribedText)
+	cmd := exec.Command("/bin/bash", scriptPath, transcribedText)
 
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -146,7 +147,7 @@ func openaiRequest(transcribedText string) string {
 		return "The response from OpenAI was empty."
 	}
 	logger.Println("OpenAI response: " + apiResponse)
-	return apiResponse
+	return ""
 }
 
 func openaiKG(speechReq sr.SpeechRequest) string {
