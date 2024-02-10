@@ -304,6 +304,7 @@ def random_sarcasm(description: str, robot: anki_vector.robot.Robot, chance: flo
         # do the sarcastic response
         robot.behavior.set_eye_color(hue=1, saturation=1)
         robot.behavior.say_text(f"{sarcasm}", use_vector_voice=False)
+        #robot.anim.play_animation('anim_rtpickup_loop_10')
         robot.behavior.set_eye_color(hue=0.83, saturation=0.76)
         print("Set Vector's eye color to purple...")
         return True
@@ -396,7 +397,7 @@ Now please handle the request, using the tools available to you. If you do not n
         clean_response = "Sorry, I don't know what came over me. I'll try to be more helpful next time."
     else:
         # it has decided it doesn't need a tool. Lets still randomly make it sarcastic.
-        sarcastic = random_sarcasm(clean_response, robot=robot, chance=0.5)
+        sarcastic = random_sarcasm(clean_response, robot=robot, chance=0.75)
         if sarcastic:
             clean_response = "Sorry, I don't know what came over me. I'll try to be more helpful next time."
     
